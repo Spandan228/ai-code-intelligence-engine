@@ -1,4 +1,5 @@
 import os
+import gc
 from typing import List, Optional
 import numpy as np
 from utils.config import EMBEDDING_MODEL_NAME
@@ -37,6 +38,13 @@ class EmbeddingGenerator:
     def generate(self, texts: List[str]) -> np.ndarray:
         if not texts:
             return np.array([])
-        # Run in low-memory batching
-        embeddings = self.model.encode(texts, batch_size=16, show_progress_bar=False)
+        
+        try:
+            import torch
+            with torch.inference_mode():
+                embeddings = self.model.encode(texts, batch_size=8, show_progress_bar=False, normalize_embeddings=True)
+        except Exception:
+            embeddings = self.model.encode(texts, batch_size=8, show_progress_bar=False, normalize_embeddings=True)
+            
+        gc.collect()
         return np.array(embeddings, dtype=np.float32)
