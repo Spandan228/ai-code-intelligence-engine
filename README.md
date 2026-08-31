@@ -7,12 +7,13 @@
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.30%2B-FF4B4B.svg?logo=streamlit&logoColor=white)](https://streamlit.io/)
 [![FAISS](https://img.shields.io/badge/FAISS-CPU%20Vector%20Store-orange.svg)](https://github.com/facebookresearch/faiss)
 [![Tree-sitter](https://img.shields.io/badge/Tree--sitter-Multi--Language%20AST-brightgreen.svg)](https://tree-sitter.github.io/)
+[![CI Pipeline](https://github.com/Spandan228/ai-code-intelligence-engine/actions/workflows/ci.yml/badge.svg)](https://github.com/Spandan228/ai-code-intelligence-engine/actions)
 [![Tests](https://img.shields.io/badge/tests-25%20passed%20%2F%20100%25-success.svg)](#-testing)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 **An enterprise-grade developer intelligence platform for multi-language AST parsing, dense vector semantic search, interactive dependency topology, and automated code quality auditing.**
 
-[Key Features](#-key-features) • [Architecture](#-architecture) • [Quick Start](#-quick-start) • [REST API](#-rest-api-documentation) • [Testing](#-testing) • [Contributing](CONTRIBUTING.md)
+[Key Features](#-key-features) • [Architecture](#-architecture) • [Quick Start](#-quick-start) • [Docker Deployment](#-docker-deployment) • [REST API](#-rest-api-documentation) • [Testing](#-testing) • [Contributing](CONTRIBUTING.md)
 
 </div>
 
@@ -98,7 +99,7 @@ flowchart TD
 - **Vector Embeddings & Database**: Sentence-Transformers (`all-MiniLM-L6-v2`), FAISS-CPU (`IndexFlatIP`)
 - **Graph & Data Visualization**: NetworkX, Plotly, NumPy, Pandas
 - **Code Quality Analysis**: Radon (Cyclomatic Complexity & Halstead Metrics)
-- **Automated Testing**: Pytest, FastAPI TestClient
+- **Automated Testing & CI/CD**: Pytest, GitHub Actions, Docker, Docker Compose
 
 ---
 
@@ -107,7 +108,9 @@ flowchart TD
 ```text
 ai-code-intelligence-engine/
 ├── .github/
-│   ├── workflows/ci.yml          # GitHub Actions CI pipeline
+│   ├── workflows/
+│   │   ├── ci.yml                # Multi-OS & multi-Python GitHub Actions CI pipeline
+│   │   └── cd-release.yml        # Automated GitHub release packaging pipeline
 │   ├── ISSUE_TEMPLATE/           # Bug report & feature request templates
 │   └── pull_request_template.md  # Pull request review checklist
 ├── ai_explainer/                 # Semantic neighborhood context synthesis
@@ -124,12 +127,15 @@ ai-code-intelligence-engine/
 ├── tests/                        # 25 automated unit, integration, and security tests
 ├── ui/                           # Streamlit enterprise dashboard and Bento components
 ├── utils/                        # Shared logging, paths, and configuration
+├── .dockerignore                 # Exclusions for container build context
 ├── .editorconfig                 # Cross-editor formatting specifications
 ├── .env.example                  # Environment configuration template
 ├── .gitignore                    # Git ignore specifications
 ├── CHANGELOG.md                  # Semantic versioning changelog
 ├── CONTRIBUTING.md               # Developer contribution guidelines
 ├── CODE_OF_CONDUCT.md           # Contributor Covenant v2.1
+├── Dockerfile                    # Production container specification
+├── docker-compose.yml            # One-command multi-service container configuration
 ├── LICENSE                       # MIT License
 ├── requirements.txt              # Core Python dependencies
 ├── ROADMAP.md                    # Project roadmap and milestones
@@ -148,7 +154,7 @@ ai-code-intelligence-engine/
 ### 2. Clone and Setup Environment
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/ai-code-intelligence-engine.git
+git clone https://github.com/Spandan228/ai-code-intelligence-engine.git
 cd ai-code-intelligence-engine
 
 # Create and activate a virtual environment
@@ -196,6 +202,25 @@ python -m streamlit run ui/dashboard.py --server.port 8501
 
 ---
 
+## 🐳 Docker Deployment
+
+You can deploy the entire engine in a containerized environment with a single command:
+
+```bash
+# Build and run both FastAPI and Streamlit via Docker Compose
+docker compose up -d --build
+```
+
+- **Streamlit UI**: [http://localhost:8501](http://localhost:8501)
+- **FastAPI Backend**: [http://localhost:8000](http://localhost:8000)
+
+To stop the services:
+```bash
+docker compose down
+```
+
+---
+
 ## 💻 CLI Scripting
 
 You can also index any codebase directly from the command line without opening the web interface:
@@ -219,8 +244,8 @@ curl -X POST "http://127.0.0.1:8000/index/local" \
 ```json
 {
   "status": "success",
-  "indexed_files": 43,
-  "snippets": 502
+  "indexed_files": 41,
+  "snippets": 134
 }
 ```
 
@@ -311,7 +336,7 @@ tests/test_full_suite.py ..............                                  [ 60%]
 tests/test_parsers.py .                                                  [ 64%]
 tests/test_robustness_and_security.py .........                          [100%]
 
-============================= 25 passed in 11.88s =============================
+============================= 25 passed in 11.13s =============================
 ```
 
 ---

@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+.git/
+.github/
+.pytest_cache/
+.coverage
+htmlcov/
+.vscode/
+.idea/
+*.tmp
+*.temp
+sample.mp4

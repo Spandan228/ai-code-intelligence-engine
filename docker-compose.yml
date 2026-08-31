@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  ai-code-engine:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ai_code_intelligence_engine
+    restart: unless-stopped
+    ports:
+      - "8000:8000"   # FastAPI Backend
+      - "8501:8501"   # Streamlit Dashboard
+    environment:
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      - STREAMLIT_SERVER_PORT=8501
+      - STREAMLIT_SERVER_HEADLESS=true
+    volumes:
+      - ./data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/stats"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
