@@ -1,14 +1,42 @@
-from typing import List
+import os
+from typing import List, Optional
 import numpy as np
-from sentence_transformers import SentenceTransformer
 from utils.config import EMBEDDING_MODEL_NAME
+from utils.logger import logger
+
+# Set thread limits before importing torch / sentence_transformers to minimize memory overhead
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 class EmbeddingGenerator:
     def __init__(self, model_name: str = EMBEDDING_MODEL_NAME):
-        self.model = SentenceTransformer(model_name)
+        self.model_name = model_name
+        self._model = None
+
+    @property
+    def model(self):
+        if self._model is None:
+            logger.info(f"Lazily loading embedding model: {self.model_name}...")
+            try:
+                import torch
+                torch.set_num_threads(1)
+                if hasattr(torch, "set_num_interop_threads"):
+                    try:
+                        torch.set_num_interop_threads(1)
+                    except RuntimeError:
+                        pass
+            except ImportError:
+                pass
+
+            from sentence_transformers import SentenceTransformer
+            self._model = SentenceTransformer(self.model_name)
+            logger.info(f"Successfully loaded {self.model_name} in low-memory mode.")
+        return self._model
 
     def generate(self, texts: List[str]) -> np.ndarray:
         if not texts:
             return np.array([])
-        embeddings = self.model.encode(texts, show_progress_bar=True)
-        return np.array(embeddings)
+        # Run in low-memory batching
+        embeddings = self.model.encode(texts, batch_size=16, show_progress_bar=False)
+        return np.array(embeddings, dtype=np.float32)

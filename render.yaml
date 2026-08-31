@@ -19,6 +19,12 @@ services:
         value: 3.10.12
       - key: EMBEDDING_MODEL_NAME
         value: all-MiniLM-L6-v2
+      - key: OMP_NUM_THREADS
+        value: "1"
+      - key: MKL_NUM_THREADS
+        value: "1"
+      - key: TOKENIZERS_PARALLELISM
+        value: "false"
 
   # -------------------------------------------------------------
   # 2. Streamlit Interactive Dashboard Web Service
@@ -34,6 +40,10 @@ services:
         value: 3.10.12
       - key: STREAMLIT_SERVER_HEADLESS
         value: "true"
+      - key: STREAMLIT_SERVER_ENABLE_CORS
+        value: "false"
+      - key: STREAMLIT_SERVER_ENABLE_XSRF_PROTECTION
+        value: "false"
       - key: API_BASE_URL
         fromService:
           type: web
