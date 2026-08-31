@@ -47,6 +47,16 @@ class SearchRequest(BaseModel):
 class ExplainRequest(BaseModel):
     code_snippet: str
 
+@app.get("/")
+async def root():
+    return {
+        "status": "online",
+        "service": "AI Code Intelligence Engine API",
+        "version": "2.0.0",
+        "documentation": "/docs",
+        "health_check": "/stats"
+    }
+
 @app.post("/index/local")
 async def index_local(request: IndexRequest):
     clean_path = request.path.strip()
