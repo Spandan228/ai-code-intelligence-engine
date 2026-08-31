@@ -14,8 +14,8 @@ def analyze_repository(metadata: List[Dict[str, Any]]) -> Dict[str, Any]:
     
     modules = set()
     for m in metadata:
-        p = m["file_path"]
-        parts = p.split(os.sep)
+        p = m["file_path"].replace("\\", "/").strip("./")
+        parts = [part for part in p.split("/") if part and part not in [".", ".."]]
         if len(parts) > 1:
             modules.add(parts[0])
         else:

@@ -1,148 +1,339 @@
 # 🧠 AI Code Intelligence Engine
 
-> **AI-powered developer intelligence platform for exploring, searching, and analyzing large codebases.**
+<div align="center">
+
+[![Python Version](https://img.shields.io/badge/python-3.10%20%7C%203.11-blue.svg?logo=python&logoColor=white)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.100%2B-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![Streamlit](https://img.shields.io/badge/Streamlit-1.30%2B-FF4B4B.svg?logo=streamlit&logoColor=white)](https://streamlit.io/)
+[![FAISS](https://img.shields.io/badge/FAISS-CPU%20Vector%20Store-orange.svg)](https://github.com/facebookresearch/faiss)
+[![Tree-sitter](https://img.shields.io/badge/Tree--sitter-Multi--Language%20AST-brightgreen.svg)](https://tree-sitter.github.io/)
+[![Tests](https://img.shields.io/badge/tests-25%20passed%20%2F%20100%25-success.svg)](#-testing)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+**An enterprise-grade developer intelligence platform for multi-language AST parsing, dense vector semantic search, interactive dependency topology, and automated code quality auditing.**
+
+[Key Features](#-key-features) • [Architecture](#-architecture) • [Quick Start](#-quick-start) • [REST API](#-rest-api-documentation) • [Testing](#-testing) • [Contributing](CONTRIBUTING.md)
+
+</div>
 
 ---
 
-## 🌟 Project Overview
+## 🌟 Overview
 
-The **AI Code Intelligence Engine** is a sophisticated developer tool designed to bridge the gap between complex codebases and developer understanding. By leveraging state-of-the-art Natural Language Processing (NLP) and graph analysis, it provides a comprehensive suite of tools for semantic exploration, dependency visualization, and automated code comprehension.
+Modern software engineering often requires navigating sprawling codebases with thousands of interconnected functions, classes, and cross-package dependencies. Traditional keyword search tools (e.g., `grep` or standard IDE text searches) struggle to understand developer intent or map macro-architectural dependencies.
 
-Whether you're onboarding to a new repository, performing a large-scale refactor, or simply trying to find "where that logic is," this engine provides the insights you need instantly.
+The **AI Code Intelligence Engine** solves this challenge by combining **multi-language Abstract Syntax Tree (AST) parsing**, **384-dimensional dense semantic embeddings**, **FAISS vector indexing**, and **NetworkX topological graph analytics** into a unified, responsive developer workspace.
 
----
-
-## 🚀 Features
-
-- **📂 Multi-Source Indexing**: Index local directories or clone and index GitHub repositories directly from the dashboard.
-- **🔍 Semantic Code Search**: Look beyond keywords. Search for logic and intent using natural language queries powered by FAISS and sentence embeddings.
-- **🧩 Dependency Visualization**: Interactive, project-wide dependency graphs showing how entities connect.
-- **🎯 Focused Graph Analysis**: Isolation of specific functions or classes to see their immediate callers and callees.
-- **🏗️ Architecture Insights**: High-level module dependency maps to understand the macro-structure of your project.
-- **📈 Repository Analytics**: Real-time metrics on function density, class distribution, and project "hotspots."
-- **🤖 AI Code Explainer**: Instant, context-aware explanations of code snippets using semantic neighborhood analysis.
-- **🚩 Quality Guard**: Automated code smell detection to identify potential refactoring candidates.
+### Who is this for?
+- **Engineers Onboarding to Large Codebases**: Quickly locate logic by asking natural language questions rather than guessing exact function names.
+- **Architects & Tech Leads**: Visualize package coupling, identify high-degree architectural hubs, and assess module coupling densities.
+- **Developers Refactoring Legacy Systems**: Detect high cyclomatic complexity ($CC > 10$) routines and oversized functions with automated remediation guidance.
 
 ---
 
-## 🏗️ Architecture Overview
+## 🚀 Key Features
 
-The system is built with a modular, service-oriented architecture:
+| Capability | Description |
+| :--- | :--- |
+| **📁 Multi-Source Ingestion** | Index local directories or clone and vectorize remote GitHub repositories directly from the UI or CLI with automatic `.git` exclusion. |
+| **🔍 Semantic Code Search** | Natural language intent search powered by `sentence-transformers/all-MiniLM-L6-v2` and FAISS `IndexFlatIP` cosine similarity ranking. |
+| **📊 Repository Analytics** | 5 Hero KPI pods (Functions, Classes, Files, Modules, Dependencies) with Connectivity Hotspot progress meters and Entity Composition ratios. |
+| **🧩 Dependency Call Graph** | Interactive whole-repository call graph with layout physics switches (`Force-Directed`, `Kamada-Kawai`), node budget limits, and degree filters. |
+| **🎯 Focused Entity Graph** | Radial concentric bipartite isolation showing inbound callers on the left semicircle and outbound callees on the right semicircle with dynamic hub suggestion chips. |
+| **🏗️ Architecture Insights** | Balanced two-column view featuring a 360° Circular Package Shell Map and a Package Coupling Telemetry Table. |
+| **🛡️ Quality Guard & Smells** | Automated Radon cyclomatic complexity and large method smell detection, 3-tier Severity Risk Matrix (Critical, High, Medium), and prioritized refactoring candidates. |
+| **🤖 Contextual AI Explainer** | Multi-section architectural synthesis retrieving semantic nearest-neighbors to explain entity roles, related symbols, and refactoring tips. |
+| **🧭 Symbol Navigation** | Precise AST declaration coordinate jumps and cross-file call-site reference tracking across the codebase. |
 
-- **Frontend**: A reactive **Streamlit** dashboard providing an interactive user experience.
-- **Backend**: A high-performance **FastAPI** server managing indexing, search, and analysis logic.
-- **Parsing**: **Tree-sitter** based multi-language parsers for precise Abstract Syntax Tree (AST) traversal.
-- **Intelligence**: **Sentence-Transformers** for embedding generation and **FAISS** for millisecond-latency similarity search.
-- **Analysis**: **NetworkX** and **Plotly** for complex graph computations and interactive visualizations.
+---
+
+## 🏗️ Architecture
+
+```mermaid
+flowchart TD
+    subgraph INGESTION ["📥 Multi-Source Ingestion & AST Parsing"]
+        A1[Local Directory] --> B[Repo Scanner]
+        A2[Remote GitHub Repo] --> B
+        B --> C[Tree-sitter Parser Orchestrator]
+        C --> D1[Python Parser]
+        C --> D2[JavaScript Parser]
+        C --> D3[Java Parser]
+        C --> D4[C / C++ Parsers]
+    end
+
+    subgraph INTELLIGENCE ["🧠 Vector & Topology Engine"]
+        D1 & D2 & D3 & D4 --> E[AST Code Snippets & Metadata]
+        E --> F[Embedding Generator <br> all-MiniLM-L6-v2]
+        F --> G[(FAISS Vector Index <br> Dense 384-d L2 Cosine)]
+        E --> H[NetworkX Topology Engine <br> Degree & Call Graph]
+        E --> I[Radon Code Smell Engine <br> CC & LOC Analysis]
+    end
+
+    subgraph BACKEND ["⚡ FastAPI REST Server (:8000)"]
+        G & H & I --> J[REST API Handlers <br> /search, /metrics, /focused-graph, /refactoring/smells]
+    end
+
+    subgraph FRONTEND ["🖥️ Streamlit Enterprise Workspace (:8501)"]
+        J --> K[Floating Brand Header & Live Radar Status]
+        K --> L1[📁 Repository Indexer]
+        K --> L2[📊 Repository Metrics]
+        K --> L3[🔍 Semantic Search]
+        K --> L4[🧩 Dependency Graph]
+        K --> L5[🎯 Focused Entity Graph]
+        K --> L6[🏗️ Architecture Insights]
+        K --> L7[🛡️ Quality Guard]
+        K --> L8[🤖 AI Explainer]
+        K --> L9[🧭 Symbol Navigation]
+    end
+```
 
 ---
 
 ## 🛠️ Tech Stack
 
-- **Languge**: Python 3.11+
-- **API Framework**: FastAPI & Uvicorn
-- **UI Framework**: Streamlit
-- **Vector Database**: FAISS (Facebook AI Similarity Search)
-- **Code Parsing**: Tree-sitter
-- **Graph Engine**: NetworkX & Plotly
-- **Data Handling**: NumPy & Pandas
-- **Logging**: Rich
+- **Core Runtime**: Python 3.10 / 3.11+
+- **Backend API**: FastAPI, Uvicorn, Pydantic, HTTPX
+- **Frontend UI**: Streamlit (Reference Design System, Plus Jakarta Sans, JetBrains Mono)
+- **AST Parsing Engine**: Tree-sitter (`tree-sitter-python`, `tree-sitter-javascript`, `tree-sitter-java`, `tree-sitter-c`, `tree-sitter-cpp`)
+- **Vector Embeddings & Database**: Sentence-Transformers (`all-MiniLM-L6-v2`), FAISS-CPU (`IndexFlatIP`)
+- **Graph & Data Visualization**: NetworkX, Plotly, NumPy, Pandas
+- **Code Quality Analysis**: Radon (Cyclomatic Complexity & Halstead Metrics)
+- **Automated Testing**: Pytest, FastAPI TestClient
 
 ---
 
-## 📁 Project Folder Structure
+## 📁 Project Structure
 
 ```text
 ai-code-intelligence-engine/
-├── ai_explainer/         # AI-based code explanation module
-├── analysis/             # Advanced repository analysis tools (Focused & Architecture)
-├── api/                  # FastAPI backend services & endpoints
-├── data/                 # Local storage for vector indices and metadata
-├── dependency_graph/     # Core dependency graph building logic
-├── indexer/              # Codebase scanning, parsing, and embedding engine
-├── parsers/              # Tree-sitter language-specific configurations
-├── refactoring/          # Code smell detection and quality analysis
-├── search/               # Semantic search logic
-├── ui/                   # Streamlit dashboard interface
-│   └── components/       # Reusable UI modules (metrics, graphs, etc.)
-├── utils/                # Shared helper utilities (logging, decorators)
-├── vector_store/         # FAISS vector database integration
-├── requirements.txt      # Project dependencies
-└── README.md             # Project documentation
+├── .github/
+│   ├── workflows/ci.yml          # GitHub Actions CI pipeline
+│   ├── ISSUE_TEMPLATE/           # Bug report & feature request templates
+│   └── pull_request_template.md  # Pull request review checklist
+├── ai_explainer/                 # Semantic neighborhood context synthesis
+├── analysis/                     # Repository metrics, focused graphs & architecture maps
+├── api/                          # FastAPI application server and REST route contracts
+├── data/                         # Local storage for FAISS indices and metadata
+├── dependency_graph/             # NetworkX call graph builder and Plotly visualizer
+├── indexer/                      # Multi-source scanning, language detection & embedding pipeline
+├── navigation/                   # AST symbol declaration and cross-file usage finder
+├── parsers/                      # Tree-sitter AST parsers for Python, JS, Java, C, and C++
+├── refactoring/                  # Radon code smell detection (CC > 10, LOC > 50)
+├── scripts/                      # CLI indexing utilities (index_repository.py)
+├── search/                       # FAISS cosine vector search engine
+├── tests/                        # 25 automated unit, integration, and security tests
+├── ui/                           # Streamlit enterprise dashboard and Bento components
+├── utils/                        # Shared logging, paths, and configuration
+├── .editorconfig                 # Cross-editor formatting specifications
+├── .env.example                  # Environment configuration template
+├── .gitignore                    # Git ignore specifications
+├── CHANGELOG.md                  # Semantic versioning changelog
+├── CONTRIBUTING.md               # Developer contribution guidelines
+├── CODE_OF_CONDUCT.md           # Contributor Covenant v2.1
+├── LICENSE                       # MIT License
+├── requirements.txt              # Core Python dependencies
+├── ROADMAP.md                    # Project roadmap and milestones
+├── SECURITY.md                   # Security reporting and support policy
+└── README.md                     # Flagship repository documentation
 ```
 
 ---
 
-## ⚙️ Installation Guide
+## ⚡ Quick Start
 
-### 1. Clone the Repository
+### 1. Prerequisites
+- **Python 3.10 or 3.11+** installed on your system.
+- **Git** for version control.
+
+### 2. Clone and Setup Environment
 ```bash
+# Clone the repository
 git clone https://github.com/your-username/ai-code-intelligence-engine.git
 cd ai-code-intelligence-engine
-```
 
-### 2. Set Up Environment
-It is recommended to use a virtual environment:
-```bash
+# Create and activate a virtual environment
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# On Linux / macOS:
+source venv/bin/activate
+
+# On Windows (PowerShell):
+venv\Scripts\Activate.ps1
 ```
 
 ### 3. Install Dependencies
 ```bash
+pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
----
-
-## 🖥️ How to Run the Project
-
-The project requires both the backend API and the frontend dashboard to be running.
-
-### 1. Start the FastAPI Backend
+### 4. (Optional) Configure Environment
+Copy the example environment configuration:
 ```bash
-uvicorn api.server:app --reload
+cp .env.example .env
 ```
-The API will be available at `http://localhost:8000`. You can view the interactive API docs at `/docs`.
 
-### 2. Start the Streamlit Dashboard
-Open a new terminal and run:
+---
+
+## 🖥️ Running the Application
+
+The engine consists of two services running in tandem: the **FastAPI REST Server** and the **Streamlit Web Dashboard**.
+
+### Step 1: Launch the FastAPI Backend
 ```bash
-streamlit run ui/dashboard.py
+python -m uvicorn api.server:app --host 127.0.0.1 --port 8000 --reload
 ```
-The dashboard will launch in your default browser at `http://localhost:8501`.
+- **API Base URL**: `http://127.0.0.1:8000`
+- **Interactive Swagger Docs**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+- **OpenAPI JSON Spec**: `http://127.0.0.1:8000/openapi.json`
+
+### Step 2: Launch the Streamlit Dashboard
+In a separate terminal window:
+```bash
+python -m streamlit run ui/dashboard.py --server.port 8501
+```
+- **Dashboard Interface**: [http://localhost:8501](http://localhost:8501)
 
 ---
 
-## 💡 Example Usage
+## 💻 CLI Scripting
 
-1.  **Index Your Code**: Go to the **Home** tab and paste the absolute path to your local repository.
-2.  **Search Logic**: Use the **Semantic Search** tab to ask "How does the authentication flow work?".
-3.  **Visualize Deps**: Switch to **Dependency Graph** to see a full interactive map of your project.
-4.  **Target Analysis**: Use **Focused Graph** and type a function name (e.g., `login_user`) to see exactly what calls it.
-5.  **Get Explanations**: Paste a confusing block of code into the **AI Code Explanation** tab to understand its purpose.
+You can also index any codebase directly from the command line without opening the web interface:
 
----
-
-## 🔮 Future Improvements
-
-- [ ] Support for additional languages (Go, Rust, Ruby).
-- [ ] Integration with Large Language Models (LLMs) like GPT-4 or Claude for deeper code synthesis.
-- [ ] Real-time indexing via file watchers.
-- [ ] Multi-user support and collaborative workspaces.
-- [ ] Enhanced dependency tracking for external libraries.
+```bash
+# Index a local codebase via CLI
+python scripts/index_repository.py /path/to/your/project
+```
 
 ---
 
-## 🤝 Contribution Guide
+## 📡 REST API Documentation
 
-Contributions are welcome! If you'd like to improve the engine:
+### 1. Index Local Repository
+```bash
+curl -X POST "http://127.0.0.1:8000/index/local" \
+     -H "Content-Type: application/json" \
+     -d '{"path": "G:/project"}'
+```
+**Response:**
+```json
+{
+  "status": "success",
+  "indexed_files": 43,
+  "snippets": 502
+}
+```
+
+### 2. Natural Language Semantic Search
+```bash
+curl -X POST "http://127.0.0.1:8000/search" \
+     -H "Content-Type: application/json" \
+     -d '{"query": "AST parsing orchestrator", "top_k": 3}'
+```
+**Response:**
+```json
+{
+  "results": [
+    {
+      "name": "CodeParserOrchestrator",
+      "file_path": "indexer/code_parser.py",
+      "type": "class",
+      "language": "python",
+      "start_line": 15,
+      "score": 0.536,
+      "code_snippet": "class CodeParserOrchestrator:\n    def __init__(self):\n..."
+    }
+  ]
+}
+```
+
+### 3. Repository Analytics & Hotspots
+```bash
+curl -X GET "http://127.0.0.1:8000/metrics"
+```
+**Response:**
+```json
+{
+  "number_of_functions": 502,
+  "number_of_classes": 123,
+  "number_of_files": 43,
+  "number_of_modules": 15,
+  "total_dependencies": 2521,
+  "most_connected_nodes": [
+    ["CodeParserOrchestrator", 145],
+    ["CodeParser", 125],
+    ["FaissIndex", 121]
+  ]
+}
+```
+
+### 4. Code Smells & Refactoring Audit
+```bash
+curl -X GET "http://127.0.0.1:8000/refactoring/smells"
+```
+**Response:**
+```json
+{
+  "count": 89,
+  "smells": [
+    {
+      "file": "indexer/code_parser.py",
+      "type": "High Complexity",
+      "details": "Function 'parse_file' has CC = 14",
+      "severity": "Critical"
+    }
+  ]
+}
+```
+
+### 5. Contextual AI Code Explanation
+```bash
+curl -X POST "http://127.0.0.1:8000/explain" \
+     -H "Content-Type: application/json" \
+     -d '{"code_snippet": "def authenticate(username, password): return verify_credentials(username, password)"}'
+```
+
+---
+
+## 🔬 Testing
+
+The repository includes an automated test suite verifying AST parsers, vector embeddings, graph algorithms, code smell detectors, and FastAPI endpoints with full input validation and error handling.
+
+### Run All Tests
+```bash
+python -m pytest tests/ -v
+```
+
+### Test Suite Summary:
+```text
+tests/test_api_endpoints.py .                                            [  4%]
+tests/test_full_suite.py ..............                                  [ 60%]
+tests/test_parsers.py .                                                  [ 64%]
+tests/test_robustness_and_security.py .........                          [100%]
+
+============================= 25 passed in 11.88s =============================
+```
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcomed and appreciated! Please review our [Contributing Guide](CONTRIBUTING.md) and [Code of Conduct](CODE_OF_CONDUCT.md) before submitting pull requests.
+
 1. Fork the repository.
-2. Create a feature branch (`git checkout -b feature/AmazingFeature`).
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`).
-4. Push to the branch (`git push origin feature/AmazingFeature`).
+2. Create a feature branch (`git checkout -b feature/amazing-feature`).
+3. Commit your changes (`git commit -m 'feat: add amazing feature'`).
+4. Push to the branch (`git push origin feature/amazing-feature`).
 5. Open a Pull Request.
 
 ---
 
-*Built with ❤️ using Python, FastAPI, FAISS, Tree-sitter, and Streamlit.*
+## 📄 License
+
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+
+---
+
+<div align="center">
+Built with ❤️ using Python, FastAPI, FAISS, Tree-sitter, NetworkX, and Streamlit.
+</div>

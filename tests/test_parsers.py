@@ -1,23 +1,20 @@
-from parsers.python_parser import PythonParser
+import pytest
 import os
+from parsers.python_parser import PythonParser
 
 def test_extraction():
     parser = PythonParser()
-    files = ["sample_test.py", "test_sample.py"]
-    
-    for file_path in files:
-        if not os.path.exists(file_path):
-            print(f"File {file_path} not found")
-            continue
-            
-        with open(file_path, "r", encoding="utf-8") as f:
-            code = f.read()
-            
-        print(f"\nParsing {file_path}...")
-        results = parser.parse_code(code, file_path)
-        print(f"Extracted {len(results)} snippets:")
-        for res in results:
-            print(f"- {res['type']}: {res['name']} at line {res['start_line']}")
+    code = """
+def sample_one():
+    pass
 
-if __name__ == "__main__":
-    test_extraction()
+class SampleClass:
+    def method_one(self):
+        pass
+"""
+    results = parser.parse_code(code, "sample.py")
+    assert len(results) == 3
+    names = [r["name"] for r in results]
+    assert "sample_one" in names
+    assert "SampleClass" in names
+    assert "method_one" in names

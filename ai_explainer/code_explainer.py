@@ -29,9 +29,11 @@ class CodeExplainer:
         else:
             explanation += "This is a **code fragment** representing a partial logic flow. "
             
+        context_str = ", ".join(context_names[:5]) if context_names else "None (isolated snippet)"
+        files_str = ", ".join(context_files[:3]) if context_files else "None"
         explanation += f"\n\n**Semantic Context:**\n"
-        explanation += f"- Relates to existing entities: `{', '.join(context_names[:5])}`\n"
-        explanation += f"- Contextual files found: `{', '.join(context_files[:3])}`\n\n"
+        explanation += f"- Relates to existing entities: `{context_str}`\n"
+        explanation += f"- Contextual files found: `{files_str}`\n\n"
         
         # Dynamic purpose description based on keywords
         purpose = "The snippet seems to handle "

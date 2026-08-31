@@ -2,6 +2,8 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 import os
+import plotly.io as pio
+from fastapi.responses import JSONResponse
 
 from indexer.repo_scanner import RepoScanner
 from indexer.code_parser import CodeParserOrchestrator
@@ -15,10 +17,16 @@ from analysis.repo_metrics import analyze_repository
 from analysis.architecture_graph import build_architecture_graph
 from analysis.focused_graph import build_focused_graph
 from ai_explainer.code_explainer import CodeExplainer
+from navigation.code_navigation import CodeNavigation
+from utils.logger import logger
 
-app = FastAPI(title="AI Code Intelligence Engine API")
+app = FastAPI(
+    title="AI Code Intelligence Engine API",
+    description="Industrial Multi-Language AST Parsing, Semantic Vector Search, Topology Analytics, and Code Quality Engine.",
+    version="2.0.0"
+)
 
-# Global instances (initialized on demand or at startup)
+# Global core instances
 embedding_gen = EmbeddingGenerator()
 vector_store = FaissIndex()
 search_engine = SemanticSearch(embedding_gen, vector_store)
@@ -36,39 +44,72 @@ class SearchRequest(BaseModel):
     query: str
     top_k: Optional[int] = 5
 
+class ExplainRequest(BaseModel):
+    code_snippet: str
+
 @app.post("/index/local")
 async def index_local(request: IndexRequest):
-    if not os.path.exists(request.path):
-        raise HTTPException(status_code=400, detail="Path does not exist")
+    clean_path = request.path.strip()
+    if not clean_path:
+        raise HTTPException(status_code=400, detail="Repository path cannot be empty")
     
-    scanner = RepoScanner(request.path)
-    files = scanner.scan()
-    orchestrator = CodeParserOrchestrator()
+    if not os.path.exists(clean_path):
+        raise HTTPException(status_code=400, detail=f"Path does not exist: '{clean_path}'")
     
-    all_metadata = []
-    all_snippets = []
-    for f in files:
-        meta_list = orchestrator.parse_file(f)
-        for meta in meta_list:
-            all_metadata.append(meta)
-            all_snippets.append(meta["code_snippet"])
-            
-    if all_snippets:
-        embeddings = embedding_gen.generate(all_snippets)
-        vector_store.add_embeddings(embeddings, all_metadata)
-        vector_store.save()
-        return {"status": "success", "indexed_files": len(files), "snippets": len(all_snippets)}
+    if not os.path.isdir(clean_path):
+        raise HTTPException(status_code=400, detail=f"Target path is not a directory: '{clean_path}'")
     
-    return {"status": "no_code_found"}
+    try:
+        scanner = RepoScanner(clean_path)
+        files = scanner.scan()
+        orchestrator = CodeParserOrchestrator()
+        
+        all_metadata = []
+        all_snippets = []
+        for f in files:
+            meta_list = orchestrator.parse_file(f)
+            for meta in meta_list:
+                meta["file_path"] = os.path.relpath(meta["file_path"], clean_path).replace("\\", "/")
+                all_metadata.append(meta)
+                all_snippets.append(meta["code_snippet"])
+                
+        if all_snippets:
+            embeddings = embedding_gen.generate(all_snippets)
+            vector_store.add_embeddings(embeddings, all_metadata)
+            vector_store.save()
+            return {"status": "success", "indexed_files": len(files), "snippets": len(all_snippets)}
+        
+        return {"status": "no_code_found", "indexed_files": len(files), "snippets": 0}
+    except Exception as e:
+        logger.error(f"Local indexing error for {clean_path}: {e}")
+        raise HTTPException(status_code=500, detail=f"Indexing failed: {str(e)}")
 
 @app.post("/index/github")
 async def index_github(request: GithubIndexRequest):
-    github_indexer.index_repo(request.url)
-    return {"status": "success", "repo_url": request.url}
+    clean_url = request.url.strip()
+    if not clean_url:
+        raise HTTPException(status_code=400, detail="GitHub repository URL cannot be empty")
+    
+    try:
+        result = github_indexer.index_repo(clean_url)
+        return {
+            "status": "success",
+            "repo_url": clean_url,
+            "indexed_files": result.get("indexed_files", 0),
+            "snippets": result.get("snippets", 0)
+        }
+    except Exception as e:
+        logger.error(f"GitHub indexing error for {clean_url}: {e}")
+        raise HTTPException(status_code=400, detail=f"Remote indexing failed: {str(e)}")
 
 @app.post("/search")
 async def search(request: SearchRequest):
-    results = search_engine.search(request.query, request.top_k)
+    clean_query = request.query.strip()
+    if not clean_query:
+        return {"results": []}
+    
+    limit = max(1, min(request.top_k or 5, 50))
+    results = search_engine.search(clean_query, top_k=limit)
     return {"results": results}
 
 @app.get("/stats")
@@ -84,22 +125,16 @@ async def get_dependency_graph():
     builder.build_from_metadata(vector_store.metadata)
     return {"nodes": len(builder.graph.nodes), "edges": len(builder.graph.edges)}
 
-import plotly.io as pio
-from fastapi.responses import JSONResponse
-
 @app.get("/architecture")
 async def get_architecture():
     if not vector_store.metadata:
         raise HTTPException(status_code=400, detail="Index is empty")
 
     fig = build_architecture_graph(vector_store.metadata)
-
     if not fig:
-        return {"error": "Could not build graph"}
+        return JSONResponse(status_code=400, content={"error": "Could not build architecture graph"})
 
-    # Convert Plotly figure into proper JSON object
     fig_json = pio.from_json(fig.to_json()).to_plotly_json()
-
     return JSONResponse(content=fig_json)
 
 @app.get("/metrics")
@@ -109,15 +144,60 @@ async def get_metrics():
 
 @app.get("/focused-graph")
 async def get_focused_graph(function: str):
-    fig = build_focused_graph(function, vector_store.metadata)
+    clean_fn = function.strip()
+    if not clean_fn:
+        raise HTTPException(status_code=400, detail="Function parameter cannot be empty")
+    
+    if not vector_store.metadata:
+        raise HTTPException(status_code=400, detail="Index is empty")
+    
+    fig = build_focused_graph(clean_fn, vector_store.metadata)
     if not fig:
-        raise HTTPException(status_code=404, detail="Entity not found")
+        raise HTTPException(status_code=404, detail=f"Symbol '{clean_fn}' not found in indexed repository")
     return fig.to_dict()
 
-class ExplainRequest(BaseModel):
-    code_snippet: str
+@app.post("/index/clear")
+async def clear_index():
+    vector_store.reset()
+    return {"status": "success", "message": "Vector store and metadata reset successfully"}
+
+@app.get("/refactoring/smells")
+async def get_code_smells():
+    smells = smell_detector.analyze_repository(vector_store.metadata)
+    return {"smells": smells, "count": len(smells)}
+
+@app.get("/navigation/definition")
+async def get_definition(name: str):
+    clean_name = name.strip()
+    if not clean_name:
+        return {"name": name, "definitions": []}
+    
+    nav = CodeNavigation(vector_store.metadata)
+    definitions = nav.jump_to_definition(clean_name)
+    return {"name": clean_name, "definitions": definitions}
+
+@app.get("/navigation/usages")
+async def get_usages(name: str):
+    clean_name = name.strip()
+    if not clean_name:
+        return {"name": name, "usages": []}
+    
+    nav = CodeNavigation(vector_store.metadata)
+    usages = nav.find_usages(clean_name)
+    return {"name": clean_name, "usages": usages}
 
 @app.post("/explain")
 async def explain(request: ExplainRequest):
-    explanation = code_explainer.explain_code(request.code_snippet)
+    clean_snip = request.code_snippet.strip()
+    if not clean_snip:
+        raise HTTPException(status_code=400, detail="Code snippet cannot be empty")
+    
+    explanation = code_explainer.explain_code(clean_snip)
     return {"explanation": explanation}
+
+@app.get("/dependency-graph/full")
+async def get_full_dependency_graph():
+    builder = GraphBuilder()
+    builder.build_from_metadata(vector_store.metadata)
+    fig = builder.get_visualization()
+    return fig.to_dict()

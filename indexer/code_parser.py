@@ -26,5 +26,6 @@ class CodeParserOrchestrator:
                 code = f.read()
             return self.parsers[language].parse_code(code, file_path)
         except Exception as e:
-            # logging should be used here
+            from utils.logger import logger
+            logger.error(f"Error parsing file {file_path}: {e}")
             return []

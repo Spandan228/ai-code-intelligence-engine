@@ -50,3 +50,19 @@ class FaissIndex:
                 results.append((self.metadata[idx], float(distances[0][i])))
         
         return results
+
+    def reset(self):
+        self.index = faiss.IndexFlatIP(self.dimension)
+        self.metadata = []
+        if os.path.exists(FAISS_INDEX_FILE):
+            try:
+                os.remove(FAISS_INDEX_FILE)
+            except Exception:
+                pass
+        if os.path.exists(METADATA_FILE):
+            try:
+                os.remove(METADATA_FILE)
+            except Exception:
+                pass
+        logger.info("Reset FAISS index and metadata.")
+

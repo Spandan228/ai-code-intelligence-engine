@@ -25,12 +25,14 @@ class CodeSmellDetector:
         except Exception:
             pass
 
-        # 2. Large function detection using AST
+        # 2. Large function detection using AST (Python) or line counting (other languages)
+        found_ast = False
         try:
             tree = ast.parse(code)
             for node in ast.walk(tree):
                 if isinstance(node, ast.FunctionDef):
-                    length = node.end_lineno - node.lineno
+                    found_ast = True
+                    length = (getattr(node, "end_lineno", 0) or 0) - node.lineno + 1
                     if length > 50:
                         smells.append({
                             "file": file_path,
@@ -41,6 +43,17 @@ class CodeSmellDetector:
                         })
         except Exception:
             pass
+
+        if not found_ast:
+            lines = code.strip().splitlines()
+            if len(lines) > 50:
+                smells.append({
+                    "file": file_path,
+                    "type": "Large Function / Block",
+                    "name": file_path.split("/")[-1],
+                    "value": len(lines),
+                    "suggestion": f"Code block in '{file_path}' is {len(lines)} lines long. Consider breaking it up."
+                })
 
         return smells
 
