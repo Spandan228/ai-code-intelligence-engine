@@ -27,11 +27,27 @@ st.set_page_config(
 # --- Inject Global Reference Design System (Phase 1) ---
 inject_enterprise_styles()
 
-raw_api = os.getenv("API_BASE_URL", "http://127.0.0.1:8000").strip().rstrip("/")
-if raw_api and not raw_api.startswith("http://") and not raw_api.startswith("https://"):
-    API_BASE = f"https://{raw_api}"
-else:
-    API_BASE = raw_api
+def resolve_api_base() -> str:
+    raw_api = os.getenv("API_BASE_URL", "").strip().rstrip("/")
+    if not raw_api:
+        return "http://127.0.0.1:8000"
+    
+    # If explicit protocol specified
+    if raw_api.startswith("http://") or raw_api.startswith("https://"):
+        return raw_api
+    
+    # If host:port provided (e.g. Render fromService hostPort or Docker container)
+    if ":" in raw_api:
+        return f"http://{raw_api}"
+    
+    # If public domain name (e.g. ai-code-intelligence-api.onrender.com)
+    if ".onrender.com" in raw_api or "." in raw_api:
+        return f"https://{raw_api}"
+    
+    # Internal service name on Render / Docker
+    return f"http://{raw_api}:10000"
+
+API_BASE = resolve_api_base()
 
 # --- Render Top Floating Utility Header (Phase 2) ---
 is_live, engine_stats = render_enterprise_header(API_BASE)

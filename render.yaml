@@ -48,4 +48,4 @@ services:
         fromService:
           type: web
           name: ai-code-intelligence-api
-          property: host
+          property: hostPort
