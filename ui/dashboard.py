@@ -27,7 +27,11 @@ st.set_page_config(
 # --- Inject Global Reference Design System (Phase 1) ---
 inject_enterprise_styles()
 
-API_BASE = "http://127.0.0.1:8000"
+raw_api = os.getenv("API_BASE_URL", "http://127.0.0.1:8000").strip().rstrip("/")
+if raw_api and not raw_api.startswith("http://") and not raw_api.startswith("https://"):
+    API_BASE = f"https://{raw_api}"
+else:
+    API_BASE = raw_api
 
 # --- Render Top Floating Utility Header (Phase 2) ---
 is_live, engine_stats = render_enterprise_header(API_BASE)

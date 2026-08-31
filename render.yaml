@@ -1,0 +1,41 @@
+# ==============================================================
+# Render Deployment Blueprint for AI Code Intelligence Engine
+# https://render.com/docs/blueprint-spec
+# ==============================================================
+
+services:
+  # -------------------------------------------------------------
+  # 1. FastAPI REST Backend Web Service
+  # -------------------------------------------------------------
+  - type: web
+    name: ai-code-intelligence-api
+    runtime: python
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    startCommand: uvicorn api.server:app --host 0.0.0.0 --port $PORT
+    plan: free
+    healthCheckPath: /stats
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.12
+      - key: EMBEDDING_MODEL_NAME
+        value: all-MiniLM-L6-v2
+
+  # -------------------------------------------------------------
+  # 2. Streamlit Interactive Dashboard Web Service
+  # -------------------------------------------------------------
+  - type: web
+    name: ai-code-intelligence-dashboard
+    runtime: python
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    startCommand: streamlit run ui/dashboard.py --server.port $PORT --server.address 0.0.0.0 --server.headless true
+    plan: free
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.12
+      - key: STREAMLIT_SERVER_HEADLESS
+        value: "true"
+      - key: API_BASE_URL
+        fromService:
+          type: web
+          name: ai-code-intelligence-api
+          property: host
