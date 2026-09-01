@@ -1,13 +1,8 @@
 import os
-import re
-import io
 import shutil
 import stat
+import subprocess
 import tempfile
-import zipfile
-import requests
-from git import Repo
-from git.exc import GitCommandError
 from indexer.repo_scanner import RepoScanner
 from indexer.code_parser import CodeParserOrchestrator
 from indexer.embedding_generator import EmbeddingGenerator
@@ -21,41 +16,6 @@ def _remove_readonly(func, path, excinfo):
     except Exception:
         pass
 
-def _fetch_github_archive(repo_url: str, dest_dir: str) -> bool:
-    """
-    Downloads repository zip archive directly from GitHub in ~1 second,
-    bypassing heavy git clone subprocesses.
-    """
-    match = re.search(r"github\.com/([^/]+)/([^/\.]+)", repo_url)
-    if not match:
-        return False
-    
-    owner, repo = match.group(1), match.group(2)
-    urls = [
-        f"https://api.github.com/repos/{owner}/{repo}/zipball",
-        f"https://codeload.github.com/{owner}/{repo}/zip/refs/heads/main",
-        f"https://codeload.github.com/{owner}/{repo}/zip/refs/heads/master"
-    ]
-    
-    for url in urls:
-        try:
-            resp = requests.get(
-                url,
-                headers={"User-Agent": "AI-Code-Intelligence-Engine/2.0"},
-                timeout=8,
-                allow_redirects=True
-            )
-            if resp.status_code == 200 and len(resp.content) > 100:
-                with zipfile.ZipFile(io.BytesIO(resp.content)) as z:
-                    z.extractall(dest_dir)
-                logger.info(f"Successfully downloaded archive for {owner}/{repo}")
-                return True
-        except Exception as e:
-            logger.debug(f"Archive fetch notice for {url}: {e}")
-            continue
-            
-    return False
-
 class GitHubIndexer:
     def __init__(self, embedding_gen: EmbeddingGenerator, vector_store: FaissIndex):
         self.embedding_gen = embedding_gen
@@ -65,24 +25,31 @@ class GitHubIndexer:
         if not repo_url or not repo_url.strip():
             raise ValueError("Repository URL cannot be empty")
 
+        clean_url = repo_url.strip()
         temp_dir = tempfile.mkdtemp(prefix="repo_ingest_")
         try:
-            logger.info(f"Ingesting repository {repo_url}...")
-            # 1. Try direct high-speed archive extraction (sub-second)
-            downloaded = _fetch_github_archive(repo_url.strip(), temp_dir)
+            logger.info(f"Cloning repository {clean_url} to sandbox {temp_dir}...")
+            # Fast shallow single-branch clone
+            proc = subprocess.run(
+                [
+                    "git", "clone",
+                    "--depth", "1",
+                    "--single-branch",
+                    "--no-tags",
+                    "-q",
+                    clean_url,
+                    temp_dir
+                ],
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
             
-            # 2. Fallback to Git shallow clone if archive download unavailable
-            if not downloaded:
-                logger.info(f"Falling back to git shallow clone for {repo_url}...")
-                Repo.clone_from(
-                    repo_url.strip(),
-                    temp_dir,
-                    depth=1,
-                    single_branch=True,
-                    no_tags=True,
-                )
-            
-            # Purge .git directory if present
+            if proc.returncode != 0:
+                logger.error(f"Git clone failed for {clean_url}: {proc.stderr}")
+                raise RuntimeError(f"Git clone failed: {proc.stderr.strip() or 'Unknown error'}")
+
+            # Immediately purge .git directory to minimize disk and avoid lockfiles
             git_dir = os.path.join(temp_dir, ".git")
             if os.path.exists(git_dir):
                 shutil.rmtree(git_dir, onerror=_remove_readonly)
@@ -116,17 +83,17 @@ class GitHubIndexer:
                 embeddings = self.embedding_gen.generate(all_snippets)
                 self.vector_store.add_embeddings(embeddings, all_metadata)
                 self.vector_store.save()
-                logger.info(f"Successfully indexed GitHub repository: {repo_url} ({len(files)} files, {len(all_snippets)} snippets)")
-                return {"status": "success", "repo_url": repo_url, "indexed_files": len(files), "snippets": len(all_snippets)}
+                logger.info(f"Successfully indexed GitHub repository: {clean_url} ({len(files)} files, {len(all_snippets)} snippets)")
+                return {"status": "success", "repo_url": clean_url, "indexed_files": len(files), "snippets": len(all_snippets)}
             
-            logger.warning(f"No supported code files found in repository: {repo_url}")
-            return {"status": "no_code_found", "repo_url": repo_url, "indexed_files": 0, "snippets": 0}
+            logger.warning(f"No supported code files found in repository: {clean_url}")
+            return {"status": "no_code_found", "repo_url": clean_url, "indexed_files": 0, "snippets": 0}
             
-        except GitCommandError as e:
-            logger.error(f"Git clone failed for {repo_url}: {e}")
-            raise RuntimeError(f"Git clone failed: {e.stderr if hasattr(e, 'stderr') else str(e)}")
+        except subprocess.TimeoutExpired:
+            logger.error(f"Git clone timed out for {clean_url}")
+            raise RuntimeError("Git clone operation timed out after 30s.")
         except Exception as e:
-            logger.error(f"Error indexing repository {repo_url}: {e}")
+            logger.error(f"Error indexing repository {clean_url}: {e}")
             raise
         finally:
             if os.path.exists(temp_dir):
