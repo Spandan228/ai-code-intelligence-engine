@@ -44,4 +44,5 @@ def test_live_api_lifecycle():
     assert len(resp_explain.json().get("explanation", "")) > 0
 
     # 9. Clean up
-    client.post("/index/local", json={"path": "G:/project"})
+    resp_clear = client.post("/index/clear")
+    assert resp_clear.status_code == 200

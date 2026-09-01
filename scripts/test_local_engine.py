@@ -1,5 +1,6 @@
 import requests
 import time
+import os
 
 def test_engine():
     print("==========================================================")
@@ -19,9 +20,10 @@ def test_engine():
     assert r.status_code == 200
 
     # 3. Local Indexing
-    print("\n[3] Ingesting Local Codebase (G:/project/indexer)...")
+    indexer_path = os.path.abspath("indexer").replace("\\", "/")
+    print(f"\n[3] Ingesting Local Codebase ({indexer_path})...")
     t0 = time.time()
-    r = requests.post("http://127.0.0.1:8000/index/local", json={"path": "G:/project/indexer"}, timeout=30)
+    r = requests.post("http://127.0.0.1:8000/index/local", json={"path": indexer_path}, timeout=30)
     print(f"Ingestion Time: {time.time() - t0:.2f}s | Status: {r.status_code} -> {r.json()}")
     assert r.status_code == 200
 
