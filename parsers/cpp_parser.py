@@ -23,3 +23,5 @@ class CPPParser(CParser):
         logger.info(f"{file_path} -> extracted {len(results)} snippets")
         
         return results
+
+CppParser = CPPParser

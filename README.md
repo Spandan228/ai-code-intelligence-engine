@@ -9,12 +9,11 @@
 [![Tree-sitter](https://img.shields.io/badge/Tree--sitter-Multi--Language%20AST-brightgreen.svg)](https://tree-sitter.github.io/)
 [![CI Pipeline](https://github.com/Spandan228/ai-code-intelligence-engine/actions/workflows/ci.yml/badge.svg)](https://github.com/Spandan228/ai-code-intelligence-engine/actions)
 [![Tests](https://img.shields.io/badge/tests-25%20passed%20%2F%20100%25-success.svg)](#-testing)
-[![Render](https://img.shields.io/badge/Render-Deploy%20Cloud-46E3B7.svg?logo=render&logoColor=white)](#-render-cloud-deployment)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 **An enterprise-grade developer intelligence platform for multi-language AST parsing, dense vector semantic search, interactive dependency topology, and automated code quality auditing.**
 
-[Key Features](#-key-features) • [Architecture](#-architecture) • [Quick Start](#-quick-start) • [Render Cloud](#-render-cloud-deployment) • [Docker Deployment](#-docker-deployment) • [REST API](#-rest-api-documentation) • [Testing](#-testing) • [Contributing](CONTRIBUTING.md)
+[Key Features](#-key-features) • [Architecture](#-architecture) • [Quick Start](#-quick-start) • [Docker Deployment](#-docker-deployment) • [REST API](#-rest-api-documentation) • [Testing](#-testing) • [Contributing](CONTRIBUTING.md)
 
 </div>
 
@@ -219,24 +218,6 @@ To stop the services:
 ```bash
 docker compose down
 ```
-
----
-
-## ☁️ Render Cloud Deployment
-
-The repository includes a ready-to-use **Render Blueprint** (`render.yaml`) to deploy both the **FastAPI Backend** and the **Streamlit Frontend** on [Render](https://render.com).
-
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Spandan228/ai-code-intelligence-engine)
-
-### Step-by-Step Render Deployment:
-1. Fork or push this repository to your GitHub account.
-2. Log in to your [Render Dashboard](https://dashboard.render.com/).
-3. Navigate to **Blueprints** and click **New Blueprint Instance**.
-4. Connect your repository (`ai-code-intelligence-engine`).
-5. Render will automatically read `render.yaml` and configure:
-   - **`ai-code-intelligence-api`** (FastAPI Web Service on Python 3.10)
-   - **`ai-code-intelligence-dashboard`** (Streamlit Web Service linked dynamically via `API_BASE_URL`)
-6. Click **Apply** to deploy both services automatically!
 
 ---
 
