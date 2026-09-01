@@ -22,10 +22,10 @@ class CodeExplainer:
         
         explanation = "### 🤖 AI Code Explanation\n\n"
         
-        if "def " in snippet or "function" in snippet or "method" in snippet:
-            explanation += "This code block defines a **functional entity** responsible for specific logic. "
-        elif "class " in snippet:
-            explanation += "This block defines a **class structure** that encapsulates data and behavior. "
+        if "class " in snippet or "struct " in snippet or "interface " in snippet:
+            explanation += "This block defines a **class structure** or type abstraction that encapsulates data and behavior. "
+        elif "def " in snippet or "function" in snippet or "method" in snippet or "=>" in snippet:
+            explanation += "This code block defines a **functional entity** responsible for specific execution logic. "
         else:
             explanation += "This is a **code fragment** representing a partial logic flow. "
             

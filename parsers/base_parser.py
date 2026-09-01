@@ -68,11 +68,14 @@ class CodeParser(ABC):
         return results
 
     def extract_snippet(self, code: str, node) -> str:
+        if not code:
+            return ""
         lines = code.splitlines()
-        start_line = node.start_point[0]
-        end_line = node.end_point[0]
-        # Safety check for multi-line snippets
-        if end_line >= len(lines):
-            end_line = len(lines) - 1
+        if not lines:
+            return ""
+        start_line = max(0, min(node.start_point[0], len(lines) - 1))
+        end_line = max(0, min(node.end_point[0], len(lines) - 1))
+        if start_line > end_line:
+            start_line, end_line = end_line, start_line
         return "\n".join(lines[start_line : end_line + 1])
 

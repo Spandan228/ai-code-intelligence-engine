@@ -177,7 +177,8 @@ if selected_page == "📁 Repository Indexer":
         </div>
         """, unsafe_allow_html=True)
         
-        local_path = st.text_input("Local Repository Path", value="G:/project", placeholder="e.g. /path/to/project", label_visibility="collapsed")
+        default_local_path = os.path.abspath(".")
+        local_path = st.text_input("Local Repository Path", value=default_local_path, placeholder="e.g. /path/to/project", label_visibility="collapsed")
         if st.button("Index Local Directory", use_container_width=True):
             with st.spinner(f"Scanning ASTs and generating embeddings for '{local_path}'..."):
                 try:

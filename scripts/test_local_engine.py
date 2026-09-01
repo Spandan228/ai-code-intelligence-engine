@@ -45,7 +45,11 @@ def test_engine():
     print("\n[5] Testing Repository Metrics (/metrics)...")
     r = requests.get("http://127.0.0.1:8000/metrics", timeout=10)
     m = r.json()
-    print(f"Status: {r.status_code} | Funcs: {m.get('total_functions')}, Classes: {m.get('total_classes')}, Files: {m.get('total_files')}, Modules: {m.get('total_modules')}")
+    funcs = m.get('number_of_functions', m.get('total_functions', 0))
+    classes = m.get('number_of_classes', m.get('total_classes', 0))
+    files = m.get('number_of_files', m.get('total_files', 0))
+    modules = m.get('number_of_modules', m.get('total_modules', 0))
+    print(f"Status: {r.status_code} | Funcs: {funcs}, Classes: {classes}, Files: {files}, Modules: {modules}")
     assert r.status_code == 200
 
     # 6. Dependency Graph

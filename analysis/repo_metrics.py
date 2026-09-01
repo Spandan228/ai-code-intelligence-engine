@@ -26,11 +26,12 @@ def analyze_repository(metadata: List[Dict[str, Any]]) -> Dict[str, Any]:
     # Connection analysis (heuristic)
     connections = {}
     for m in metadata:
-        name = m["name"]
+        name = m.get("name", "")
         snippet = m.get("code_snippet", "")
         count = 0
         for other in metadata:
-            if other["name"] != name and f"{other['name']}(" in snippet:
+            other_name = other.get("name", "")
+            if other_name and other_name != name and f"{other_name}(" in snippet:
                 count += 1
         connections[name] = count
         
@@ -43,5 +44,9 @@ def analyze_repository(metadata: List[Dict[str, Any]]) -> Dict[str, Any]:
         "number_of_files": num_files,
         "number_of_modules": num_modules,
         "total_dependencies": total_deps,
-        "most_connected_nodes": most_connected
+        "most_connected_nodes": most_connected,
+        "total_functions": num_functions,
+        "total_classes": num_classes,
+        "total_files": num_files,
+        "total_modules": num_modules
     }

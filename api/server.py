@@ -22,6 +22,8 @@ from ai_explainer.code_explainer import CodeExplainer
 from navigation.code_navigation import CodeNavigation
 from utils.logger import logger
 
+from fastapi.middleware.cors import CORSMiddleware
+
 # Global core instances
 embedding_gen = EmbeddingGenerator()
 vector_store = FaissIndex()
@@ -33,6 +35,10 @@ code_explainer = CodeExplainer(search_engine)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("AI Code Intelligence Engine API initializing...")
+    try:
+        vector_store.load()
+    except Exception as e:
+        logger.warning(f"Initial vector store loading skipped: {e}")
     yield
     logger.info("AI Code Intelligence Engine API stopping...")
 
@@ -41,6 +47,14 @@ app = FastAPI(
     description="Industrial Multi-Language AST Parsing, Semantic Vector Search, Topology Analytics, and Code Quality Engine.",
     version="2.0.0",
     lifespan=lifespan
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 class IndexRequest(BaseModel):

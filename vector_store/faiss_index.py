@@ -13,10 +13,11 @@ class FaissIndex:
         self.metadata: List[Dict[str, Any]] = []
 
     def add_embeddings(self, embeddings: np.ndarray, metadata: List[Dict[str, Any]]):
-        if embeddings.shape[0] == 0:
+        if embeddings is None or embeddings.shape[0] == 0:
             return
         
-        # Normalize embeddings for cosine similarity
+        # Ensure contiguous float32 array for safe FAISS C++ bindings
+        embeddings = np.ascontiguousarray(embeddings, dtype=np.float32)
         faiss.normalize_L2(embeddings)
         self.index.add(embeddings)
         self.metadata.extend(metadata)
@@ -40,9 +41,10 @@ class FaissIndex:
             logger.warning("FAISS index or metadata file not found. Starting with empty index.")
 
     def search(self, query_embedding: np.ndarray, top_k: int = 5) -> List[Tuple[Dict[str, Any], float]]:
-        if self.index.ntotal == 0:
+        if self.index.ntotal == 0 or query_embedding is None or len(query_embedding) == 0:
             return []
         
+        query_embedding = np.ascontiguousarray(query_embedding, dtype=np.float32)
         faiss.normalize_L2(query_embedding)
         distances, indices = self.index.search(query_embedding, top_k)
         
