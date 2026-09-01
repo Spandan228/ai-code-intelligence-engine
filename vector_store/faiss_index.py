@@ -23,6 +23,8 @@ class FaissIndex:
         logger.info(f"Added {embeddings.shape[0]} embeddings to FAISS index.")
 
     def save(self):
+        os.makedirs(os.path.dirname(str(FAISS_INDEX_FILE)), exist_ok=True)
+        os.makedirs(os.path.dirname(str(METADATA_FILE)), exist_ok=True)
         faiss.write_index(self.index, str(FAISS_INDEX_FILE))
         with open(METADATA_FILE, "wb") as f:
             pickle.dump(self.metadata, f)
@@ -65,4 +67,3 @@ class FaissIndex:
             except Exception:
                 pass
         logger.info("Reset FAISS index and metadata.")
-

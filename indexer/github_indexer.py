@@ -23,7 +23,7 @@ def _remove_readonly(func, path, excinfo):
 
 def _fetch_github_archive(repo_url: str, dest_dir: str) -> bool:
     """
-    Downloads repository zip archive directly via HTTPS in ~1 second,
+    Downloads repository zip archive directly from GitHub in ~1 second,
     bypassing heavy git clone subprocesses.
     """
     match = re.search(r"github\.com/([^/]+)/([^/\.]+)", repo_url)
@@ -31,23 +31,27 @@ def _fetch_github_archive(repo_url: str, dest_dir: str) -> bool:
         return False
     
     owner, repo = match.group(1), match.group(2)
-    branches = ["main", "master"]
+    urls = [
+        f"https://api.github.com/repos/{owner}/{repo}/zipball",
+        f"https://codeload.github.com/{owner}/{repo}/zip/refs/heads/main",
+        f"https://codeload.github.com/{owner}/{repo}/zip/refs/heads/master"
+    ]
     
-    for branch in branches:
-        zip_url = f"https://codeload.github.com/{owner}/{repo}/zip/refs/heads/{branch}"
+    for url in urls:
         try:
             resp = requests.get(
-                zip_url,
+                url,
                 headers={"User-Agent": "AI-Code-Intelligence-Engine/2.0"},
-                timeout=6
+                timeout=8,
+                allow_redirects=True
             )
             if resp.status_code == 200 and len(resp.content) > 100:
                 with zipfile.ZipFile(io.BytesIO(resp.content)) as z:
                     z.extractall(dest_dir)
-                logger.info(f"Successfully downloaded archive for {owner}/{repo} ({branch})")
+                logger.info(f"Successfully downloaded archive for {owner}/{repo}")
                 return True
         except Exception as e:
-            logger.debug(f"Branch '{branch}' archive fetch notice: {e}")
+            logger.debug(f"Archive fetch notice for {url}: {e}")
             continue
             
     return False
@@ -64,7 +68,7 @@ class GitHubIndexer:
         temp_dir = tempfile.mkdtemp(prefix="repo_ingest_")
         try:
             logger.info(f"Ingesting repository {repo_url}...")
-            # 1. Try ultra-fast direct archive extraction (sub-second)
+            # 1. Try direct high-speed archive extraction (sub-second)
             downloaded = _fetch_github_archive(repo_url.strip(), temp_dir)
             
             # 2. Fallback to Git shallow clone if archive download unavailable
