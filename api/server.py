@@ -4,6 +4,8 @@ from typing import List, Dict, Any, Optional
 import os
 import plotly.io as pio
 from fastapi.responses import JSONResponse
+from contextlib import asynccontextmanager
+import threading
 
 from indexer.repo_scanner import RepoScanner
 from indexer.code_parser import CodeParserOrchestrator
@@ -19,9 +21,6 @@ from analysis.focused_graph import build_focused_graph
 from ai_explainer.code_explainer import CodeExplainer
 from navigation.code_navigation import CodeNavigation
 from utils.logger import logger
-
-from contextlib import asynccontextmanager
-import threading
 
 # Global core instances
 embedding_gen = EmbeddingGenerator()
@@ -64,7 +63,7 @@ class ExplainRequest(BaseModel):
     code_snippet: str
 
 @app.get("/")
-async def root():
+def root():
     return {
         "status": "online",
         "service": "AI Code Intelligence Engine API",
@@ -74,7 +73,7 @@ async def root():
     }
 
 @app.post("/index/local")
-async def index_local(request: IndexRequest):
+def index_local(request: IndexRequest):
     clean_path = request.path.strip()
     if not clean_path:
         raise HTTPException(status_code=400, detail="Repository path cannot be empty")
@@ -111,7 +110,7 @@ async def index_local(request: IndexRequest):
         raise HTTPException(status_code=500, detail=f"Indexing failed: {str(e)}")
 
 @app.post("/index/github")
-async def index_github(request: GithubIndexRequest):
+def index_github(request: GithubIndexRequest):
     clean_url = request.url.strip()
     if not clean_url:
         raise HTTPException(status_code=400, detail="GitHub repository URL cannot be empty")
@@ -129,7 +128,7 @@ async def index_github(request: GithubIndexRequest):
         raise HTTPException(status_code=400, detail=f"Remote indexing failed: {str(e)}")
 
 @app.post("/search")
-async def search(request: SearchRequest):
+def search(request: SearchRequest):
     clean_query = request.query.strip()
     if not clean_query:
         return {"results": []}
@@ -139,20 +138,20 @@ async def search(request: SearchRequest):
     return {"results": results}
 
 @app.get("/stats")
-async def get_stats():
+def get_stats():
     return {
         "total_snippets": len(vector_store.metadata),
         "dimension": vector_store.dimension
     }
 
 @app.get("/dependency-graph")
-async def get_dependency_graph():
+def get_dependency_graph():
     builder = GraphBuilder()
     builder.build_from_metadata(vector_store.metadata)
     return {"nodes": len(builder.graph.nodes), "edges": len(builder.graph.edges)}
 
 @app.get("/architecture")
-async def get_architecture():
+def get_architecture():
     if not vector_store.metadata:
         raise HTTPException(status_code=400, detail="Index is empty")
 
@@ -164,12 +163,12 @@ async def get_architecture():
     return JSONResponse(content=fig_json)
 
 @app.get("/metrics")
-async def get_metrics():
+def get_metrics():
     metrics = analyze_repository(vector_store.metadata)
     return metrics
 
 @app.get("/focused-graph")
-async def get_focused_graph(function: str):
+def get_focused_graph(function: str):
     clean_fn = function.strip()
     if not clean_fn:
         raise HTTPException(status_code=400, detail="Function parameter cannot be empty")
@@ -183,17 +182,17 @@ async def get_focused_graph(function: str):
     return fig.to_dict()
 
 @app.post("/index/clear")
-async def clear_index():
+def clear_index():
     vector_store.reset()
     return {"status": "success", "message": "Vector store and metadata reset successfully"}
 
 @app.get("/refactoring/smells")
-async def get_code_smells():
+def get_code_smells():
     smells = smell_detector.analyze_repository(vector_store.metadata)
     return {"smells": smells, "count": len(smells)}
 
 @app.get("/navigation/definition")
-async def get_definition(name: str):
+def get_definition(name: str):
     clean_name = name.strip()
     if not clean_name:
         return {"name": name, "definitions": []}
@@ -203,7 +202,7 @@ async def get_definition(name: str):
     return {"name": clean_name, "definitions": definitions}
 
 @app.get("/navigation/usages")
-async def get_usages(name: str):
+def get_usages(name: str):
     clean_name = name.strip()
     if not clean_name:
         return {"name": name, "usages": []}
@@ -213,7 +212,7 @@ async def get_usages(name: str):
     return {"name": clean_name, "usages": usages}
 
 @app.post("/explain")
-async def explain(request: ExplainRequest):
+def explain(request: ExplainRequest):
     clean_snip = request.code_snippet.strip()
     if not clean_snip:
         raise HTTPException(status_code=400, detail="Code snippet cannot be empty")
@@ -222,7 +221,7 @@ async def explain(request: ExplainRequest):
     return {"explanation": explanation}
 
 @app.get("/dependency-graph/full")
-async def get_full_dependency_graph():
+def get_full_dependency_graph():
     builder = GraphBuilder()
     builder.build_from_metadata(vector_store.metadata)
     fig = builder.get_visualization()
