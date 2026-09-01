@@ -4,8 +4,8 @@ import io
 import shutil
 import stat
 import tempfile
-import urllib.request
 import zipfile
+import requests
 from git import Repo
 from git.exc import GitCommandError
 from indexer.repo_scanner import RepoScanner
@@ -31,24 +31,23 @@ def _fetch_github_archive(repo_url: str, dest_dir: str) -> bool:
         return False
     
     owner, repo = match.group(1), match.group(2)
-    branches = ["main", "master", "develop"]
+    branches = ["main", "master"]
     
     for branch in branches:
-        zip_url = f"https://github.com/{owner}/{repo}/archive/refs/heads/{branch}.zip"
+        zip_url = f"https://codeload.github.com/{owner}/{repo}/zip/refs/heads/{branch}"
         try:
-            req = urllib.request.Request(
+            resp = requests.get(
                 zip_url,
-                headers={"User-Agent": "AI-Code-Intelligence-Engine/2.0"}
+                headers={"User-Agent": "AI-Code-Intelligence-Engine/2.0"},
+                timeout=6
             )
-            with urllib.request.urlopen(req, timeout=12) as resp:
-                if resp.status == 200:
-                    zip_data = resp.read()
-                    with zipfile.ZipFile(io.BytesIO(zip_data)) as z:
-                        z.extractall(dest_dir)
-                    logger.info(f"Successfully downloaded and extracted GitHub archive for {owner}/{repo} ({branch})")
-                    return True
+            if resp.status_code == 200 and len(resp.content) > 100:
+                with zipfile.ZipFile(io.BytesIO(resp.content)) as z:
+                    z.extractall(dest_dir)
+                logger.info(f"Successfully downloaded archive for {owner}/{repo} ({branch})")
+                return True
         except Exception as e:
-            logger.debug(f"Archive fetch branch '{branch}' failed: {e}")
+            logger.debug(f"Branch '{branch}' archive fetch notice: {e}")
             continue
             
     return False
@@ -87,9 +86,9 @@ class GitHubIndexer:
             scanner = RepoScanner(temp_dir)
             files = scanner.scan()
             
-            # Scan top 35 application source files
-            if len(files) > 35:
-                files = files[:35]
+            # Scan top 20 application source files for rapid cloud response
+            if len(files) > 20:
+                files = files[:20]
             
             orchestrator = CodeParserOrchestrator()
             all_metadata = []
@@ -103,8 +102,8 @@ class GitHubIndexer:
                     all_snippets.append(meta["code_snippet"])
             
             if all_snippets:
-                # Cap snippets to 75 on remote cloud ingestion to guarantee sub-3s response
-                MAX_INGEST_SNIPPETS = 75
+                # Cap snippets to 35 on remote cloud ingestion to guarantee response in < 2 seconds
+                MAX_INGEST_SNIPPETS = 35
                 if len(all_snippets) > MAX_INGEST_SNIPPETS:
                     logger.info(f"Limiting remote indexing to top {MAX_INGEST_SNIPPETS} entities for instant response.")
                     all_snippets = all_snippets[:MAX_INGEST_SNIPPETS]
