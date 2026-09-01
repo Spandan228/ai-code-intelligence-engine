@@ -21,7 +21,7 @@ class GitHubIndexer:
         self.embedding_gen = embedding_gen
         self.vector_store = vector_store
 
-    def index_repo(self, repo_url: str):
+    def index_repo(self, repo_url: str, max_files: int = 200, max_snippets: int = 1000):
         if not repo_url or not repo_url.strip():
             raise ValueError("Repository URL cannot be empty")
 
@@ -30,7 +30,6 @@ class GitHubIndexer:
         try:
             logger.info(f"Cloning repository {clean_url} to sandbox {temp_dir}...")
             
-            # Prevent Git from hanging on stdin prompts in cloud environments
             git_env = os.environ.copy()
             git_env["GIT_TERMINAL_PROMPT"] = "0"
             git_env["GIT_ASKPASS"] = "echo"
@@ -48,14 +47,14 @@ class GitHubIndexer:
                 capture_output=True,
                 text=True,
                 env=git_env,
-                timeout=15
+                timeout=60
             )
             
             if proc.returncode != 0:
                 logger.error(f"Git clone failed for {clean_url}: {proc.stderr}")
                 raise RuntimeError(f"Git clone failed: {proc.stderr.strip() or 'Invalid or private repository'}")
 
-            # Immediately purge .git directory to minimize disk and avoid lockfiles
+            # Immediately purge .git directory to minimize disk usage and avoid file locks
             git_dir = os.path.join(temp_dir, ".git")
             if os.path.exists(git_dir):
                 shutil.rmtree(git_dir, onerror=_remove_readonly)
@@ -63,9 +62,9 @@ class GitHubIndexer:
             scanner = RepoScanner(temp_dir)
             files = scanner.scan()
             
-            # Scan top 20 application source files for rapid cloud response
-            if len(files) > 20:
-                files = files[:20]
+            if len(files) > max_files:
+                logger.info(f"Capping file scan to top {max_files} source files.")
+                files = files[:max_files]
             
             orchestrator = CodeParserOrchestrator()
             all_metadata = []
@@ -79,12 +78,10 @@ class GitHubIndexer:
                     all_snippets.append(meta["code_snippet"])
             
             if all_snippets:
-                # Cap snippets to 30 on remote cloud ingestion to guarantee response in < 2 seconds
-                MAX_INGEST_SNIPPETS = 30
-                if len(all_snippets) > MAX_INGEST_SNIPPETS:
-                    logger.info(f"Limiting remote indexing to top {MAX_INGEST_SNIPPETS} entities for instant response.")
-                    all_snippets = all_snippets[:MAX_INGEST_SNIPPETS]
-                    all_metadata = all_metadata[:MAX_INGEST_SNIPPETS]
+                if len(all_snippets) > max_snippets:
+                    logger.info(f"Capping vectorization to top {max_snippets} AST entities.")
+                    all_snippets = all_snippets[:max_snippets]
+                    all_metadata = all_metadata[:max_snippets]
 
                 embeddings = self.embedding_gen.generate(all_snippets)
                 self.vector_store.add_embeddings(embeddings, all_metadata)
@@ -97,7 +94,7 @@ class GitHubIndexer:
             
         except subprocess.TimeoutExpired:
             logger.error(f"Git clone timed out for {clean_url}")
-            raise RuntimeError("Git clone operation timed out after 15s.")
+            raise RuntimeError("Git clone operation timed out after 60s.")
         except Exception as e:
             logger.error(f"Error indexing repository {clean_url}: {e}")
             raise

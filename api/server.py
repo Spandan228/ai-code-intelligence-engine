@@ -32,15 +32,9 @@ code_explainer = CodeExplainer(search_engine)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    def _warm():
-        try:
-            logger.info("Pre-warming embedding model in background thread...")
-            _ = embedding_gen.model
-            logger.info("Embedding model pre-warmed and ready.")
-        except Exception as e:
-            logger.warning(f"Background warmup notice: {e}")
-    threading.Thread(target=_warm, daemon=True).start()
+    logger.info("AI Code Intelligence Engine API initializing...")
     yield
+    logger.info("AI Code Intelligence Engine API stopping...")
 
 app = FastAPI(
     title="AI Code Intelligence Engine API",

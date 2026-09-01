@@ -54,10 +54,12 @@ scratch/
 .tempmediaStorage/
 
 # Project Generated Data & Local Indices
-data/indices/*.index
-data/indices/*.json
+data/indices/
+data/*.index
+data/*.pkl
 *.faiss
 *.index
+*.pkl
 
 # Node.js
 node_modules/
