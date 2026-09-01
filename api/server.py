@@ -20,11 +20,8 @@ from ai_explainer.code_explainer import CodeExplainer
 from navigation.code_navigation import CodeNavigation
 from utils.logger import logger
 
-app = FastAPI(
-    title="AI Code Intelligence Engine API",
-    description="Industrial Multi-Language AST Parsing, Semantic Vector Search, Topology Analytics, and Code Quality Engine.",
-    version="2.0.0"
-)
+from contextlib import asynccontextmanager
+import threading
 
 # Global core instances
 embedding_gen = EmbeddingGenerator()
@@ -33,6 +30,25 @@ search_engine = SemanticSearch(embedding_gen, vector_store)
 github_indexer = GitHubIndexer(embedding_gen, vector_store)
 smell_detector = CodeSmellDetector()
 code_explainer = CodeExplainer(search_engine)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    def _warm():
+        try:
+            logger.info("Pre-warming embedding model in background thread...")
+            _ = embedding_gen.model
+            logger.info("Embedding model pre-warmed and ready.")
+        except Exception as e:
+            logger.warning(f"Background warmup notice: {e}")
+    threading.Thread(target=_warm, daemon=True).start()
+    yield
+
+app = FastAPI(
+    title="AI Code Intelligence Engine API",
+    description="Industrial Multi-Language AST Parsing, Semantic Vector Search, Topology Analytics, and Code Quality Engine.",
+    version="2.0.0",
+    lifespan=lifespan
+)
 
 class IndexRequest(BaseModel):
     path: str

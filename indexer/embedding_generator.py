@@ -18,7 +18,7 @@ class EmbeddingGenerator:
     @property
     def model(self):
         if self._model is None:
-            logger.info(f"Lazily loading embedding model: {self.model_name}...")
+            logger.info(f"Loading embedding model: {self.model_name}...")
             try:
                 import torch
                 torch.set_num_threads(1)
@@ -37,14 +37,21 @@ class EmbeddingGenerator:
 
     def generate(self, texts: List[str]) -> np.ndarray:
         if not texts:
-            return np.array([])
+            return np.empty((0, 384), dtype=np.float32)
         
-        try:
-            import torch
-            with torch.inference_mode():
-                embeddings = self.model.encode(texts, batch_size=8, show_progress_bar=False, normalize_embeddings=True)
-        except Exception:
-            embeddings = self.model.encode(texts, batch_size=8, show_progress_bar=False, normalize_embeddings=True)
+        model = self.model
+        all_embeddings = []
+        chunk_size = 16
+        
+        for i in range(0, len(texts), chunk_size):
+            chunk = texts[i : i + chunk_size]
+            try:
+                import torch
+                with torch.inference_mode():
+                    emb = model.encode(chunk, batch_size=chunk_size, show_progress_bar=False, normalize_embeddings=True)
+            except Exception:
+                emb = model.encode(chunk, batch_size=chunk_size, show_progress_bar=False, normalize_embeddings=True)
+            all_embeddings.append(emb)
+            gc.collect()
             
-        gc.collect()
-        return np.array(embeddings, dtype=np.float32)
+        return np.vstack(all_embeddings).astype(np.float32)

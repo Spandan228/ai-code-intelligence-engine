@@ -29,7 +29,12 @@ class GitHubIndexer:
         temp_dir = tempfile.mkdtemp(prefix="repo_clone_")
         try:
             logger.info(f"Cloning repository {repo_url} to {temp_dir}...")
-            Repo.clone_from(repo_url.strip(), temp_dir, depth=1)
+            Repo.clone_from(repo_url.strip(), temp_dir, depth=1, single_branch=True)
+            
+            # Immediately purge .git directory to save memory and scan time
+            git_dir = os.path.join(temp_dir, ".git")
+            if os.path.exists(git_dir):
+                shutil.rmtree(git_dir, onerror=_remove_readonly)
             
             scanner = RepoScanner(temp_dir)
             files = scanner.scan()
@@ -62,5 +67,6 @@ class GitHubIndexer:
             logger.error(f"Error indexing repository {repo_url}: {e}")
             raise
         finally:
-            shutil.rmtree(temp_dir, onerror=_remove_readonly)
+            if os.path.exists(temp_dir):
+                shutil.rmtree(temp_dir, onerror=_remove_readonly)
             logger.info(f"Cleaned up temporary directory {temp_dir}")
