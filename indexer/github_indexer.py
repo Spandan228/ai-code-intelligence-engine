@@ -31,7 +31,7 @@ class GitHubIndexer:
             logger.info(f"Cloning repository {repo_url} to {temp_dir}...")
             Repo.clone_from(repo_url.strip(), temp_dir, depth=1, single_branch=True)
             
-            # Immediately purge .git directory to save memory and scan time
+            # Immediately purge .git directory to save memory and disk
             git_dir = os.path.join(temp_dir, ".git")
             if os.path.exists(git_dir):
                 shutil.rmtree(git_dir, onerror=_remove_readonly)
@@ -51,14 +51,21 @@ class GitHubIndexer:
                     all_snippets.append(meta["code_snippet"])
             
             if all_snippets:
+                # Cap snippets to 200 on remote ingestion to ensure response within < 5 seconds
+                MAX_INGEST_SNIPPETS = 200
+                if len(all_snippets) > MAX_INGEST_SNIPPETS:
+                    logger.info(f"Limiting remote indexing to top {MAX_INGEST_SNIPPETS} architectural entities for cloud responsiveness.")
+                    all_snippets = all_snippets[:MAX_INGEST_SNIPPETS]
+                    all_metadata = all_metadata[:MAX_INGEST_SNIPPETS]
+
                 embeddings = self.embedding_gen.generate(all_snippets)
                 self.vector_store.add_embeddings(embeddings, all_metadata)
                 self.vector_store.save()
                 logger.info(f"Successfully indexed GitHub repository: {repo_url} ({len(files)} files, {len(all_snippets)} snippets)")
-                return {"status": "success", "indexed_files": len(files), "snippets": len(all_snippets)}
+                return {"status": "success", "repo_url": repo_url, "indexed_files": len(files), "snippets": len(all_snippets)}
             
             logger.warning(f"No supported code files found in repository: {repo_url}")
-            return {"status": "no_code_found", "indexed_files": 0, "snippets": 0}
+            return {"status": "no_code_found", "repo_url": repo_url, "indexed_files": 0, "snippets": 0}
             
         except GitCommandError as e:
             logger.error(f"Git clone failed for {repo_url}: {e}")

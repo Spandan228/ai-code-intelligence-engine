@@ -228,11 +228,15 @@ if selected_page == "📁 Repository Indexer":
                     try:
                         res = requests.post(f"{API_BASE}/index/github", json={"url": github_url}, timeout=120)
                         if res.status_code == 200:
-                            st.success("✅ Remote repository cloned and indexed successfully!")
+                            data = res.json()
+                            if data.get("status") == "success":
+                                st.success(f"✅ Remote repository cloned and indexed! ({data.get('indexed_files', 0)} files, {data.get('snippets', 0)} AST snippets)")
+                            else:
+                                st.info(f"Repository scanned: {data.get('status')}")
                             st.cache_data.clear()
                             st.rerun()
                         else:
-                            st.error(f"Remote indexing failed with status {res.status_code}")
+                            st.error(f"Remote indexing failed ({res.status_code}): {res.text[:200]}")
                     except Exception as e:
                         st.error(f"Error indexing GitHub repo: {e}")
             else:
