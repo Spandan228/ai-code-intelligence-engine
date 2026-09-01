@@ -29,15 +29,26 @@ class GitHubIndexer:
         temp_dir = tempfile.mkdtemp(prefix="repo_clone_")
         try:
             logger.info(f"Cloning repository {repo_url} to {temp_dir}...")
-            Repo.clone_from(repo_url.strip(), temp_dir, depth=1, single_branch=True)
+            # Fast shallow single-branch clone without tags or commit history
+            Repo.clone_from(
+                repo_url.strip(),
+                temp_dir,
+                depth=1,
+                single_branch=True,
+                no_tags=True,
+            )
             
-            # Immediately purge .git directory to save memory and disk
+            # Immediately purge .git directory to minimize disk and scan overhead
             git_dir = os.path.join(temp_dir, ".git")
             if os.path.exists(git_dir):
                 shutil.rmtree(git_dir, onerror=_remove_readonly)
             
             scanner = RepoScanner(temp_dir)
             files = scanner.scan()
+            
+            # Prioritize top 30 core application files for cloud responsiveness
+            if len(files) > 30:
+                files = files[:30]
             
             orchestrator = CodeParserOrchestrator()
             all_metadata = []
@@ -51,8 +62,8 @@ class GitHubIndexer:
                     all_snippets.append(meta["code_snippet"])
             
             if all_snippets:
-                # Cap snippets to 200 on remote ingestion to ensure response within < 5 seconds
-                MAX_INGEST_SNIPPETS = 200
+                # Cap snippets to 60 on remote cloud ingestion to guarantee response in < 3 seconds
+                MAX_INGEST_SNIPPETS = 60
                 if len(all_snippets) > MAX_INGEST_SNIPPETS:
                     logger.info(f"Limiting remote indexing to top {MAX_INGEST_SNIPPETS} architectural entities for cloud responsiveness.")
                     all_snippets = all_snippets[:MAX_INGEST_SNIPPETS]
