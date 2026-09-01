@@ -8,13 +8,23 @@ def render_enterprise_header(api_base: str):
     """
     is_live = False
     stats = {}
+    
+    # Try primary api_base with resilient timeout
     try:
-        r = requests.get(f"{api_base}/stats", timeout=1.5)
+        r = requests.get(f"{api_base}/stats", timeout=5.0)
         if r.status_code == 200:
             is_live = True
             stats = r.json()
     except Exception:
-        is_live = False
+        # If running on Render and private hostname failed, try public onrender fallback
+        if "ai-code-intelligence-api" in api_base and not "onrender.com" in api_base:
+            try:
+                r = requests.get("https://ai-code-intelligence-api.onrender.com/stats", timeout=5.0)
+                if r.status_code == 200:
+                    is_live = True
+                    stats = r.json()
+            except Exception:
+                is_live = False
 
     status_pill = (
         '<div class="status-capsule-online"><span class="pulse-dot-online"></span>ENGINE ONLINE (FAISS + MiniLM)</div>'

@@ -29,6 +29,12 @@ inject_enterprise_styles()
 
 def resolve_api_base() -> str:
     raw_api = os.getenv("API_BASE_URL", "").strip().rstrip("/")
+    
+    # If running on Render cloud
+    if os.getenv("RENDER") or "render.com" in os.getenv("RENDER_EXTERNAL_URL", ""):
+        if not raw_api or "ai-code-intelligence-api" in raw_api:
+            return "https://ai-code-intelligence-api.onrender.com"
+    
     if not raw_api:
         return "http://127.0.0.1:8000"
     
@@ -36,16 +42,16 @@ def resolve_api_base() -> str:
     if raw_api.startswith("http://") or raw_api.startswith("https://"):
         return raw_api
     
-    # If host:port provided (e.g. Render fromService hostPort or Docker container)
-    if ":" in raw_api:
-        return f"http://{raw_api}"
-    
     # If public domain name (e.g. ai-code-intelligence-api.onrender.com)
     if ".onrender.com" in raw_api or "." in raw_api:
         return f"https://{raw_api}"
     
-    # Internal service name on Render / Docker
-    return f"http://{raw_api}:10000"
+    # If host:port provided
+    if ":" in raw_api:
+        return f"http://{raw_api}"
+    
+    # Internal service name on Docker
+    return f"http://{raw_api}:8000"
 
 API_BASE = resolve_api_base()
 
