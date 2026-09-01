@@ -29,7 +29,12 @@ class GitHubIndexer:
         temp_dir = tempfile.mkdtemp(prefix="repo_ingest_")
         try:
             logger.info(f"Cloning repository {clean_url} to sandbox {temp_dir}...")
-            # Fast shallow single-branch clone
+            
+            # Prevent Git from hanging on stdin prompts in cloud environments
+            git_env = os.environ.copy()
+            git_env["GIT_TERMINAL_PROMPT"] = "0"
+            git_env["GIT_ASKPASS"] = "echo"
+            
             proc = subprocess.run(
                 [
                     "git", "clone",
@@ -42,12 +47,13 @@ class GitHubIndexer:
                 ],
                 capture_output=True,
                 text=True,
-                timeout=30
+                env=git_env,
+                timeout=15
             )
             
             if proc.returncode != 0:
                 logger.error(f"Git clone failed for {clean_url}: {proc.stderr}")
-                raise RuntimeError(f"Git clone failed: {proc.stderr.strip() or 'Unknown error'}")
+                raise RuntimeError(f"Git clone failed: {proc.stderr.strip() or 'Invalid or private repository'}")
 
             # Immediately purge .git directory to minimize disk and avoid lockfiles
             git_dir = os.path.join(temp_dir, ".git")
@@ -73,8 +79,8 @@ class GitHubIndexer:
                     all_snippets.append(meta["code_snippet"])
             
             if all_snippets:
-                # Cap snippets to 35 on remote cloud ingestion to guarantee response in < 2 seconds
-                MAX_INGEST_SNIPPETS = 35
+                # Cap snippets to 30 on remote cloud ingestion to guarantee response in < 2 seconds
+                MAX_INGEST_SNIPPETS = 30
                 if len(all_snippets) > MAX_INGEST_SNIPPETS:
                     logger.info(f"Limiting remote indexing to top {MAX_INGEST_SNIPPETS} entities for instant response.")
                     all_snippets = all_snippets[:MAX_INGEST_SNIPPETS]
@@ -91,7 +97,7 @@ class GitHubIndexer:
             
         except subprocess.TimeoutExpired:
             logger.error(f"Git clone timed out for {clean_url}")
-            raise RuntimeError("Git clone operation timed out after 30s.")
+            raise RuntimeError("Git clone operation timed out after 15s.")
         except Exception as e:
             logger.error(f"Error indexing repository {clean_url}: {e}")
             raise
